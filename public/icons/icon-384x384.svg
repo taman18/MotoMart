@@ -1,0 +1,9 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='384' height='384' viewBox='0 0 384 384'>
+  <rect width='384' height='384' rx='46' fill='#1e3a5f'/>
+  <rect x='30.72' y='30.72' width='322.56' height='322.56' rx='32.199999999999996' fill='#1e40af'/>
+  <!-- Wrench icon simplified -->
+  <circle cx='134.39999999999998' cy='122.88' r='49.92' fill='none' stroke='#f97316' stroke-width='23.04'/>
+  <line x1='168.96' y1='157.44' x2='276.48' y2='264.96' stroke='#f97316' stroke-width='23.04' stroke-linecap='round'/>
+  <!-- M letter -->
+  <text x='199.68' y='314.88' font-family='Arial,sans-serif' font-weight='900' font-size='107.52000000000001' fill='white' text-anchor='middle'>M</text>
+</svg>

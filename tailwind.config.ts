@@ -26,6 +26,15 @@ const config: Config = {
           600: "#ea580c",
         },
       },
+      keyframes: {
+        "slide-up": {
+          from: { opacity: "0", transform: "translateX(-50%) translateY(1rem)" },
+          to:   { opacity: "1", transform: "translateX(-50%) translateY(0)" },
+        },
+      },
+      animation: {
+        "slide-up": "slide-up 0.3s ease-out both",
+      },
     },
   },
   plugins: [],

@@ -1,6 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Chatbot from "@/components/store/Chatbot";
+import InstallPrompt from "@/components/layout/InstallPrompt";
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
       {children}
       <Footer />
       <Chatbot />
+      <InstallPrompt />
     </>
   );
 }

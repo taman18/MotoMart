@@ -69,11 +69,11 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-accent-500 mt-0.5 shrink-0" />
-                <span>Shop No. 12, Auto Parts Market, Sector 18, Noida, UP 201301</span>
+                <span>SCO NO. 3, Motor market, Sector 48-C, Chandigarh, 160047</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-accent-500 shrink-0" />
-                <a href="tel:+918800123456" className="hover:text-white transition-colors">+91 88001 23456</a>
+                <a href="tel:+9988252552" className="hover:text-white transition-colors">+91 99882 52552</a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-accent-500 shrink-0" />
@@ -82,8 +82,8 @@ export default function Footer() {
             </ul>
             <div className="mt-4 p-3 bg-gray-800 rounded-lg text-xs text-gray-400">
               <p className="font-medium text-gray-300 mb-1">Business Hours</p>
-              <p>Mon – Sat: 9:00 AM – 7:00 PM</p>
-              <p>Sunday: 10:00 AM – 4:00 PM</p>
+              <p>Mon – Sat: 10:00 AM – 7:00 PM</p>
+              <p>Sunday: 11:00 AM – 3:00 PM</p>
             </div>
           </div>
         </div>

@@ -44,8 +44,8 @@ export default function AdminLoginPage() {
 
       <div className="relative w-full max-w-md">
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header strip */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header strip — always dark */}
           <div className="bg-gray-900 px-8 py-6 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <div className="bg-accent-500 p-2 rounded-xl">
@@ -63,11 +63,11 @@ export default function AdminLoginPage() {
 
           {/* Form */}
           <div className="px-8 py-8">
-            <h1 className="text-xl font-bold text-gray-900 mb-1">Welcome back</h1>
-            <p className="text-gray-500 text-sm mb-6">Sign in with your admin credentials</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">Welcome back</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Sign in with your admin credentials</p>
 
             {error && (
-              <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-5">
+              <div className="flex items-center gap-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm px-4 py-3 rounded-xl mb-5">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
@@ -76,41 +76,41 @@ export default function AdminLoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Username */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   Username
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => { setUsername(e.target.value); setError(""); }}
                     placeholder="admin"
                     autoComplete="username"
-                    className="w-full pl-10 pr-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
+                    className="w-full pl-10 pr-4 py-3 text-sm border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
                     placeholder="••••••••"
                     autoComplete="current-password"
-                    className="w-full pl-10 pr-11 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
+                    className="w-full pl-10 pr-11 py-3 text-sm border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -120,7 +120,7 @@ export default function AdminLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary-800 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-colors mt-2 flex items-center justify-center gap-2"
+                className="w-full bg-primary-800 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-colors mt-2 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -133,10 +133,10 @@ export default function AdminLoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-              <p className="text-xs text-gray-400">
+            <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700 text-center">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 Store customer?{" "}
-                <a href="/" className="text-primary-700 hover:underline font-medium">
+                <a href="/" className="text-primary-700 dark:text-primary-300 hover:underline font-medium">
                   Go to MotoMart
                 </a>
               </p>

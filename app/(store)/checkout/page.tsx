@@ -70,23 +70,23 @@ export default function CheckoutPage() {
 
   if (placed) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10 max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-green-50 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Placed!</h2>
-          <p className="text-gray-500 text-sm mb-1">
-            Your order <span className="font-semibold text-gray-900">{orderId}</span> has been placed successfully.
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Order Placed!</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
+            Your order <span className="font-semibold text-gray-900 dark:text-gray-100">{orderId}</span> has been placed successfully.
           </p>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
             We&apos;ll call you on <strong>{form.phone}</strong> to confirm delivery to{" "}
             <strong>{form.city}</strong>.
           </p>
 
-          <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-6 text-left">
-            <p className="text-sm font-semibold text-orange-800 mb-1">Payment: Cash on Delivery</p>
-            <p className="text-xs text-orange-600">
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl p-4 mb-6 text-left">
+            <p className="text-sm font-semibold text-orange-800 dark:text-orange-300 mb-1">Payment: Cash on Delivery</p>
+            <p className="text-xs text-orange-600 dark:text-orange-400">
               Please keep ₹{finalTotal.toLocaleString("en-IN")} ready at the time of delivery.
             </p>
           </div>
@@ -100,7 +100,7 @@ export default function CheckoutPage() {
             </Link>
             <Link
               href="/parts"
-              className="border-2 border-gray-200 text-gray-700 font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors"
+              className="border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Continue Shopping
             </Link>
@@ -112,10 +112,10 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Your cart is empty.</p>
-          <Link href="/parts" className="text-primary-700 font-semibold hover:underline">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">Your cart is empty.</p>
+          <Link href="/parts" className="text-primary-700 dark:text-primary-300 font-semibold hover:underline">
             Browse Parts
           </Link>
         </div>
@@ -137,10 +137,10 @@ export default function CheckoutPage() {
     icon?: React.ComponentType<{ className?: string }>;
   }) => (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{label}</label>
       <div className="relative">
         {Icon && (
-          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
         )}
         <input
           type={type}
@@ -150,10 +150,10 @@ export default function CheckoutPage() {
             setForm((f) => ({ ...f, [name]: e.target.value }));
             setErrors((err) => ({ ...err, [name]: undefined }));
           }}
-          className={`w-full ${Icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm border rounded-lg outline-none transition-colors ${
+          className={`w-full ${Icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm border rounded-lg outline-none transition-colors text-gray-900 dark:text-gray-100 ${
             errors[name]
-              ? "border-red-300 focus:border-red-500 bg-red-50"
-              : "border-gray-200 focus:border-primary-500 bg-white"
+              ? "border-red-300 dark:border-red-600 focus:border-red-500 bg-red-50 dark:bg-red-900/20"
+              : "border-gray-200 dark:border-gray-600 focus:border-primary-500 bg-white dark:bg-gray-700"
           }`}
         />
       </div>
@@ -162,24 +162,24 @@ export default function CheckoutPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-100 py-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 py-4">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Link href="/cart" className="hover:text-primary-700">Cart</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <Link href="/cart" className="hover:text-primary-700 dark:hover:text-primary-300">Cart</Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-gray-900 font-medium">Checkout</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Checkout</span>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-xl font-bold text-gray-900 mb-6">Delivery Details</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Delivery Details</h1>
 
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Form */}
-            <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 space-y-5">
               <Field label="Full Name" name="name" placeholder="Rajesh Kumar" icon={User} />
               <Field label="Mobile Number" name="phone" placeholder="9876543210" type="tel" icon={Phone} />
               <Field label="Full Address" name="address" placeholder="House No., Street, Locality" icon={MapPin} />
@@ -190,17 +190,17 @@ export default function CheckoutPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">State</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">State</label>
                 <select
                   value={form.state}
                   onChange={(e) => {
                     setForm((f) => ({ ...f, state: e.target.value }));
                     setErrors((err) => ({ ...err, state: undefined }));
                   }}
-                  className={`w-full px-3 py-2.5 text-sm border rounded-lg outline-none transition-colors ${
+                  className={`w-full px-3 py-2.5 text-sm border rounded-lg outline-none transition-colors text-gray-900 dark:text-gray-100 ${
                     errors.state
-                      ? "border-red-300 bg-red-50"
-                      : "border-gray-200 focus:border-primary-500 bg-white"
+                      ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20"
+                      : "border-gray-200 dark:border-gray-600 focus:border-primary-500 bg-white dark:bg-gray-700"
                   }`}
                 >
                   <option value="">Select State</option>
@@ -218,12 +218,12 @@ export default function CheckoutPage() {
 
               {/* Payment Method */}
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-3">Payment Method</p>
-                <div className="border-2 border-primary-700 bg-primary-50 rounded-xl p-4 flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full border-4 border-primary-700" />
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Payment Method</p>
+                <div className="border-2 border-primary-700 dark:border-primary-500 bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4 flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full border-4 border-primary-700 dark:border-primary-400" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">Cash on Delivery (COD)</p>
-                    <p className="text-xs text-gray-500">Pay when your parts arrive at your door</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cash on Delivery (COD)</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Pay when your parts arrive at your door</p>
                   </div>
                   <span className="ml-auto text-2xl">💵</span>
                 </div>
@@ -232,40 +232,40 @@ export default function CheckoutPage() {
 
             {/* Order Summary */}
             <div className="w-full lg:w-80 shrink-0">
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-20">
-                <h2 className="font-bold text-gray-900 mb-4">Order Summary</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 sticky top-20">
+                <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Order Summary</h2>
 
                 <div className="space-y-3 mb-4">
                   {items.map(({ part, quantity }) => (
                     <div key={part.id} className="flex gap-3 items-start">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                        <Wrench className="w-5 h-5 text-gray-300" />
+                      <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center shrink-0">
+                        <Wrench className="w-5 h-5 text-gray-300 dark:text-gray-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-900 line-clamp-1">{part.name}</p>
-                        <p className="text-xs text-gray-400">Qty: {quantity}</p>
+                        <p className="text-xs font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{part.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Qty: {quantity}</p>
                       </div>
-                      <p className="text-xs font-semibold text-gray-900 shrink-0">
+                      <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 shrink-0">
                         ₹{(part.price * quantity).toLocaleString("en-IN")}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-gray-100 pt-3 space-y-2 text-sm">
-                  <div className="flex justify-between text-gray-600">
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Subtotal</span>
                     <span>₹{totalPrice.toLocaleString("en-IN")}</span>
                   </div>
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Delivery</span>
                     {deliveryFee === 0 ? (
-                      <span className="text-green-600 font-medium">FREE</span>
+                      <span className="text-green-600 dark:text-green-400 font-medium">FREE</span>
                     ) : (
                       <span>₹{deliveryFee}</span>
                     )}
                   </div>
-                  <div className="flex justify-between font-bold text-gray-900 text-base border-t border-gray-100 pt-2 mt-1">
+                  <div className="flex justify-between font-bold text-gray-900 dark:text-gray-100 text-base border-t border-gray-100 dark:border-gray-700 pt-2 mt-1">
                     <span>Total (COD)</span>
                     <span>₹{finalTotal.toLocaleString("en-IN")}</span>
                   </div>
@@ -278,7 +278,7 @@ export default function CheckoutPage() {
                   Place Order (COD) 🛵
                 </button>
 
-                <p className="text-xs text-gray-400 text-center mt-3">
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-3">
                   By placing the order you agree to our Terms & Conditions
                 </p>
               </div>

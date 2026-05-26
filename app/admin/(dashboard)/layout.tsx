@@ -17,9 +17,9 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-gray-500">
-          <span className="w-5 h-5 border-2 border-gray-300 border-t-primary-700 rounded-full animate-spin" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+          <span className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-primary-700 rounded-full animate-spin" />
           Checking access...
         </div>
       </div>
@@ -27,7 +27,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>

@@ -70,7 +70,6 @@ function LoginForm() {
     const result = await sendOtp(identifier);
     setLoading(false);
     if (!result.ok) { setError(result.error ?? "Failed to send OTP."); return; }
-    // Show OTP in demo
     if (result.otp) setShownOtp(result.otp);
     setStep("otp");
     setInfo(`OTP sent to ${identifier}`);
@@ -118,21 +117,21 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
         {/* Header */}
         <div className="px-7 pt-7 pb-5">
           {step === "otp" && (
             <button
               onClick={() => { setStep("identifier"); setOtp(["","","","","",""]); setError(""); setShownOtp(""); }}
-              className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-4 transition-colors"
+              className="flex items-center gap-1 text-sm text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-4 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" /> Change number
             </button>
           )}
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
             {step === "identifier" ? "Sign In" : "Verify OTP"}
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             {step === "identifier"
               ? "Enter your mobile or email to continue"
               : `We sent a 6-digit code to ${identifier}`}
@@ -142,13 +141,13 @@ function LoginForm() {
         <div className="px-7 pb-7 space-y-5">
           {/* Error / Info */}
           {error && (
-            <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
+            <div className="flex items-center gap-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm px-4 py-3 rounded-xl">
               <AlertCircle className="w-4 h-4 shrink-0" />
               {error}
             </div>
           )}
           {info && step === "otp" && !error && (
-            <div className="flex items-center gap-2.5 bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl">
+            <div className="flex items-center gap-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm px-4 py-3 rounded-xl">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               {info}
             </div>
@@ -157,13 +156,13 @@ function LoginForm() {
           {step === "identifier" && (
             <>
               {/* Method toggle */}
-              <div className="flex bg-gray-100 rounded-xl p-1">
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
                 <button
                   onClick={() => { setMethod("phone"); setIdentifier(""); setError(""); }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-colors ${
                     method === "phone"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
                 >
                   <Phone className="w-3.5 h-3.5" /> Mobile
@@ -172,8 +171,8 @@ function LoginForm() {
                   onClick={() => { setMethod("email"); setIdentifier(""); setError(""); }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-colors ${
                     method === "email"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
                 >
                   <Mail className="w-3.5 h-3.5" /> Email
@@ -182,13 +181,13 @@ function LoginForm() {
 
               {/* Input */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   {method === "phone" ? "Mobile Number" : "Email Address"}
                 </label>
                 <div className="relative">
                   {method === "phone" ? (
                     <div className="flex">
-                      <span className="inline-flex items-center px-3 border border-r-0 border-gray-200 bg-gray-50 text-gray-500 text-sm rounded-l-xl">
+                      <span className="inline-flex items-center px-3 border border-r-0 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm rounded-l-xl">
                         +91
                       </span>
                       <input
@@ -198,7 +197,7 @@ function LoginForm() {
                         onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
                         placeholder="9876543210"
                         maxLength={10}
-                        className="flex-1 px-3 py-3 text-sm border border-gray-200 rounded-r-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
+                        className="flex-1 px-3 py-3 text-sm border border-gray-200 dark:border-gray-600 rounded-r-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                       />
                     </div>
                   ) : (
@@ -208,7 +207,7 @@ function LoginForm() {
                       onChange={(e) => { setIdentifier(e.target.value); setError(""); }}
                       onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
                       placeholder="you@example.com"
-                      className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
+                      className="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                     />
                   )}
                 </div>
@@ -217,7 +216,7 @@ function LoginForm() {
               <button
                 onClick={handleSendOtp}
                 disabled={loading || !identifier}
-                className="w-full flex items-center justify-center gap-2 bg-primary-800 hover:bg-primary-700 disabled:bg-gray-200 disabled:cursor-not-allowed text-white disabled:text-gray-400 font-bold py-3.5 rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-primary-800 hover:bg-primary-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white disabled:text-gray-400 dark:disabled:text-gray-500 font-bold py-3.5 rounded-xl transition-colors"
               >
                 {loading ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -232,7 +231,7 @@ function LoginForm() {
             <>
               {/* OTP boxes */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Enter 6-digit OTP
                 </label>
                 <div className="flex gap-2 justify-between" onPaste={handleOtpPaste}>
@@ -248,9 +247,9 @@ function LoginForm() {
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
                       className={`w-11 h-12 text-center text-lg font-bold border rounded-xl outline-none transition-all ${
                         digit
-                          ? "border-primary-500 bg-primary-50 text-primary-800"
-                          : "border-gray-200 text-gray-900"
-                      } focus:border-primary-500 focus:ring-2 focus:ring-primary-100`}
+                          ? "border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300"
+                          : "border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+                      } focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30`}
                     />
                   ))}
                 </div>
@@ -258,17 +257,17 @@ function LoginForm() {
 
               {/* Demo OTP hint */}
               {shownOtp && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-800">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2.5 text-xs text-amber-800 dark:text-amber-300">
                   <span className="font-semibold">Demo OTP:</span>{" "}
-                  <code className="font-mono font-bold text-amber-900">{shownOtp}</code>
-                  <span className="text-amber-600 ml-1">(shown for demo purposes)</span>
+                  <code className="font-mono font-bold text-amber-900 dark:text-amber-200">{shownOtp}</code>
+                  <span className="text-amber-600 dark:text-amber-400 ml-1">(shown for demo purposes)</span>
                 </div>
               )}
 
               <button
                 onClick={handleVerifyOtp}
                 disabled={loading || otp.join("").length < 6}
-                className="w-full flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-200 disabled:cursor-not-allowed text-white disabled:text-gray-400 font-bold py-3.5 rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white disabled:text-gray-400 dark:disabled:text-gray-500 font-bold py-3.5 rounded-xl transition-colors"
               >
                 {loading ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -280,9 +279,9 @@ function LoginForm() {
               {/* Resend */}
               <div className="text-center">
                 {resendCountdown > 0 ? (
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-400 dark:text-gray-500">
                     Resend OTP in{" "}
-                    <span className="font-semibold text-gray-600">{resendCountdown}s</span>
+                    <span className="font-semibold text-gray-600 dark:text-gray-300">{resendCountdown}s</span>
                   </p>
                 ) : (
                   <button
@@ -291,7 +290,7 @@ function LoginForm() {
                       setShownOtp("");
                       await handleSendOtp();
                     }}
-                    className="flex items-center gap-1.5 text-sm text-primary-700 hover:underline font-medium mx-auto"
+                    className="flex items-center gap-1.5 text-sm text-primary-700 dark:text-primary-300 hover:underline font-medium mx-auto"
                   >
                     <RefreshCw className="w-3.5 h-3.5" /> Resend OTP
                   </button>
@@ -301,9 +300,9 @@ function LoginForm() {
           )}
 
           {/* Register link */}
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             New to MotoMart?{" "}
-            <Link href="/register" className="text-primary-700 font-semibold hover:underline">
+            <Link href="/register" className="text-primary-700 dark:text-primary-300 font-semibold hover:underline">
               Create account
             </Link>
           </p>
@@ -311,12 +310,12 @@ function LoginForm() {
       </div>
 
       {/* Demo hint */}
-      <div className="mt-4 bg-white/80 backdrop-blur rounded-xl px-4 py-3 border border-gray-200 shadow-sm">
-        <p className="text-xs text-gray-500 text-center">
-          <span className="font-semibold text-gray-700">Demo accounts:</span>{" "}
-          <code className="bg-gray-100 px-1 rounded">9876543210</code>{" "}
+      <div className="mt-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+          <span className="font-semibold text-gray-700 dark:text-gray-300">Demo accounts:</span>{" "}
+          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-800 dark:text-gray-200">9876543210</code>{" "}
           or{" "}
-          <code className="bg-gray-100 px-1 rounded">test@example.com</code>
+          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-gray-800 dark:text-gray-200">test@example.com</code>
         </p>
       </div>
     </div>

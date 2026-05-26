@@ -164,8 +164,8 @@ export default function AdminPartsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Parts Management</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{allParts.length} total parts</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Parts Management</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{allParts.length} total parts</p>
         </div>
         <button
           onClick={openAdd}
@@ -176,76 +176,76 @@ export default function AdminPartsPage() {
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-5">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 mb-5">
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Search by name, SKU, or category..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-10">
+              <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-10">
                   #
                 </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   <button onClick={() => toggleSort("name")} className="flex items-center gap-1">
                     Name <SortIcon field="name" />
                   </button>
                 </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">SKU</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">SKU</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Category</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   <button onClick={() => toggleSort("price")} className="flex items-center gap-1">
                     Price <SortIcon field="price" />
                   </button>
                 </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   <button onClick={() => toggleSort("stock")} className="flex items-center gap-1">
                     Stock <SortIcon field="stock" />
                   </button>
                 </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
               {filtered.map((part, i) => (
-                <tr key={part.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 text-gray-400 text-xs">{i + 1}</td>
+                <tr key={part.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+                  <td className="px-5 py-3.5 text-gray-400 dark:text-gray-500 text-xs">{i + 1}</td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                        <Wrench className="w-4 h-4 text-gray-300" />
+                      <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center shrink-0">
+                        <Wrench className="w-4 h-4 text-gray-300 dark:text-gray-500" />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 text-xs leading-tight max-w-[180px] line-clamp-2">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs leading-tight max-w-[180px] line-clamp-2">
                           {part.name}
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">{part.brand}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{part.brand}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 font-mono text-xs text-gray-500">{part.sku}</td>
+                  <td className="px-5 py-3.5 font-mono text-xs text-gray-500 dark:text-gray-400">{part.sku}</td>
                   <td className="px-5 py-3.5">
-                    <span className="text-xs bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full font-medium">
+                    <span className="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">
                       {part.category}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 font-bold text-gray-900">
+                  <td className="px-5 py-3.5 font-bold text-gray-900 dark:text-gray-100">
                     ₹{part.price.toLocaleString("en-IN")}
                   </td>
-                  <td className="px-5 py-3.5 text-gray-700 font-medium">{part.stock}</td>
+                  <td className="px-5 py-3.5 text-gray-700 dark:text-gray-300 font-medium">{part.stock}</td>
                   <td className="px-5 py-3.5">
                     <StockBadge stock={part.stock} minStock={part.minStock} />
                   </td>
@@ -253,13 +253,13 @@ export default function AdminPartsPage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => openEdit(part)}
-                        className="p-1.5 text-gray-400 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteConfirm(part.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -275,15 +275,15 @@ export default function AdminPartsPage() {
       {/* Delete Confirm */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
-            <h3 className="font-bold text-gray-900 mb-2">Delete Part?</h3>
-            <p className="text-sm text-gray-500 mb-5">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Part?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
               This action cannot be undone. The part will be permanently removed.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50"
+                className="flex-1 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
                 Cancel
               </button>
@@ -301,90 +301,90 @@ export default function AdminPartsPage() {
       {/* Add/Edit Modal */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-              <h2 className="font-bold text-gray-900">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100">
                 {modal === "add" ? "Add New Part" : "Edit Part"}
               </h2>
-              <button onClick={() => setModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-500" />
+              <button onClick={() => setModal(null)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Part Name *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Part Name *</label>
                   <input
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     placeholder="e.g. Honda Activa 6G Brake Pad Set"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</label>
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                     rows={3}
                     placeholder="Part description..."
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 resize-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Price (₹) *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Price (₹) *</label>
                   <input
                     type="number"
                     value={form.price}
                     onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
                     placeholder="450"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">MRP (₹)</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">MRP (₹)</label>
                   <input
                     type="number"
                     value={form.mrp}
                     onChange={(e) => setForm((f) => ({ ...f, mrp: e.target.value }))}
                     placeholder="550"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Stock *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Stock *</label>
                   <input
                     type="number"
                     value={form.stock}
                     onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
                     placeholder="50"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Min Stock Alert</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Min Stock Alert</label>
                   <input
                     type="number"
                     value={form.minStock}
                     onChange={(e) => setForm((f) => ({ ...f, minStock: e.target.value }))}
                     placeholder="10"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Category</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as Category }))}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -393,11 +393,11 @@ export default function AdminPartsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Brand</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Brand</label>
                   <select
                     value={form.brand}
                     onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value as BikeBrand }))}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     {["Honda", "Hero", "Bajaj", "TVS", "Yamaha", "Suzuki", "Royal Enfield", "Universal"].map((b) => (
                       <option key={b} value={b}>{b}</option>
@@ -406,10 +406,10 @@ export default function AdminPartsPage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Compatible Bikes ({form.compatibleBikes.length} selected)
                   </label>
-                  <div className="border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto grid grid-cols-2 gap-1.5">
+                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto grid grid-cols-2 gap-1.5 bg-white dark:bg-gray-700">
                     {allBikes.map((bike) => (
                       <label key={bike} className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -425,7 +425,7 @@ export default function AdminPartsPage() {
                           }
                           className="w-3.5 h-3.5 rounded accent-primary-700"
                         />
-                        <span className="text-xs text-gray-700">{bike}</span>
+                        <span className="text-xs text-gray-700 dark:text-gray-300">{bike}</span>
                       </label>
                     ))}
                   </div>
@@ -439,7 +439,7 @@ export default function AdminPartsPage() {
                       onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))}
                       className="w-4 h-4 rounded accent-primary-700"
                     />
-                    <span className="text-sm font-medium text-gray-700">Featured Part</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Featured Part</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -448,16 +448,16 @@ export default function AdminPartsPage() {
                       onChange={(e) => setForm((f) => ({ ...f, isSale: e.target.checked }))}
                       className="w-4 h-4 rounded accent-primary-700"
                     />
-                    <span className="text-sm font-medium text-gray-700">On Sale</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">On Sale</span>
                   </label>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Product Image Upload
                   </label>
-                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-gray-400 text-sm">
-                    <Wrench className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <div className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center text-gray-400 dark:text-gray-500 text-sm">
+                    <Wrench className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                     <p>Click to upload or drag and drop</p>
                     <p className="text-xs mt-0.5">PNG, JPG up to 2MB</p>
                     <input type="file" className="hidden" accept="image/*" />
@@ -466,10 +466,10 @@ export default function AdminPartsPage() {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 sticky bottom-0 bg-white dark:bg-gray-800">
               <button
                 onClick={() => setModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50"
+                className="flex-1 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
                 Cancel
               </button>

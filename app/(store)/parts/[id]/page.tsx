@@ -1,33 +1,60 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, notFound } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ShoppingCart, Minus, Plus, Star, Truck, Shield, RotateCcw, Wrench, ChevronRight, ThumbsUp } from "lucide-react";
-import { parts, reviews } from "@/lib/data";
+import {
+  ShoppingCart, Minus, Plus, Star, Truck, Shield, RotateCcw,
+  Wrench, ChevronRight, ThumbsUp, Loader2,
+} from "lucide-react";
+import { useGetPartQuery, useListPartsQuery } from "@/store/api/partsApi";
 import { useCart } from "@/context/CartContext";
 import StockBadge, { getStockStatus } from "@/components/store/StockBadge";
 import PartCard from "@/components/store/PartCard";
+import { reviews } from "@/lib/data";
+import type { Category } from "@/lib/types";
 
 type Tab = "description" | "compatibility" | "reviews";
 
 export default function PartDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const part = parts.find((p) => p.id === id);
-  const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<Tab>("description");
+  const { data, isLoading, isError } = useGetPartQuery(id);
+  const part = data?.data.part;
+
+  const { data: relatedData } = useListPartsQuery(
+    { category: part?.category as Category, limit: 4 },
+    { skip: !part }
+  );
+  const relatedParts = (relatedData?.data.parts ?? []).filter((p) => p.id !== id).slice(0, 4);
+
+  const [quantity, setQuantity]       = useState(1);
+  const [activeTab, setActiveTab]     = useState<Tab>("description");
   const [addedToCart, setAddedToCart] = useState(false);
   const { addToCart } = useCart();
 
-  if (!part) return notFound();
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen gap-2 text-gray-500 dark:text-gray-400">
+        <Loader2 className="w-6 h-6 animate-spin" /> Loading part…
+      </div>
+    );
+  }
+
+  if (isError || !part) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-gray-500 dark:text-gray-400">
+        <p className="text-4xl">🔧</p>
+        <p className="font-semibold">Part not found.</p>
+        <Link href="/parts" className="text-sm text-primary-600 hover:underline">← Back to Parts</Link>
+      </div>
+    );
+  }
 
   const stockStatus = getStockStatus(part.stock, part.minStock);
-  const discount = Math.round(((part.mrp - part.price) / part.mrp) * 100);
-  const relatedParts = parts.filter((p) => p.id !== part.id && (p.category === part.category || p.brand === part.brand)).slice(0, 4);
+  const discount    = Math.round(((part.mrp - part.price) / part.mrp) * 100);
 
   function handleAddToCart() {
-    if (!part) return;
-    addToCart(part, quantity);
+    addToCart(part!, quantity);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   }
@@ -51,12 +78,17 @@ export default function PartDetailPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2">
             {/* Image */}
             <div className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center min-h-72 lg:min-h-full p-12 relative">
-              <Wrench className="w-32 h-32 text-gray-300 dark:text-gray-500" />
+              {part.images?.[0]
+                ? <img src={part.images[0]} alt={part.name} className="object-contain max-h-72" />
+                : <Wrench className="w-32 h-32 text-gray-300 dark:text-gray-500" />
+              }
               {part.isSale && discount > 0 && (
-                <span className="absolute top-4 left-4 bg-accent-500 text-white text-sm font-bold px-3 py-1 rounded-full">-{discount}% OFF</span>
+                <span className="absolute top-4 left-4 bg-accent-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+                  -{discount}% OFF
+                </span>
               )}
             </div>
 
@@ -98,18 +130,19 @@ export default function PartDetailPage() {
                 )}
               </div>
 
-              <div className="mb-5">
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Compatible Bikes:</p>
-                <div className="flex flex-wrap gap-2">
-                  {part.compatibleBikes.map((bike) => (
-                    <span key={bike} className="bg-blue-50 dark:bg-blue-900/30 text-primary-700 dark:text-primary-300 text-xs font-medium px-3 py-1 rounded-full border border-blue-100 dark:border-blue-800">
-                      {bike}
-                    </span>
-                  ))}
+              {part.compatibleBikes.length > 0 && (
+                <div className="mb-5">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Compatible Bikes:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {part.compatibleBikes.map((bike) => (
+                      <span key={bike} className="bg-blue-50 dark:bg-blue-900/30 text-primary-700 dark:text-primary-300 text-xs font-medium px-3 py-1 rounded-full border border-blue-100 dark:border-blue-800">
+                        {bike}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Qty + Cart */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
                   <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -171,7 +204,7 @@ export default function PartDetailPage() {
           <div className="p-6">
             {activeTab === "description" && (
               <div className="text-sm text-gray-700 dark:text-gray-300 space-y-3">
-                <p className="leading-relaxed">{part.description}</p>
+                <p className="leading-relaxed">{part.description || "No description available."}</p>
                 <ul className="space-y-1">
                   <li>Brand: <strong className="text-gray-900 dark:text-gray-100">{part.brand}</strong></li>
                   <li>Category: <strong className="text-gray-900 dark:text-gray-100">{part.category}</strong></li>
@@ -183,14 +216,18 @@ export default function PartDetailPage() {
             {activeTab === "compatibility" && (
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">This part is compatible with the following bike models:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {part.compatibleBikes.map((bike) => (
-                    <div key={bike} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">{bike}</span>
-                    </div>
-                  ))}
-                </div>
+                {part.compatibleBikes.length === 0 ? (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">No compatibility info available.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {part.compatibleBikes.map((bike) => (
+                      <div key={bike} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">{bike}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {activeTab === "reviews" && (

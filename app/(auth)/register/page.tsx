@@ -76,7 +76,7 @@ export default function RegisterPage() {
     const code = otp.join("");
     if (code.length < 6) { setError("Enter the 6-digit OTP."); return; }
     setError(""); setLoading(true);
-    const result = await registerUser(name.trim(), identifier);
+    const result = await registerUser(name.trim(), identifier, code);
     setLoading(false);
     if (result.ok) {
       router.replace("/");

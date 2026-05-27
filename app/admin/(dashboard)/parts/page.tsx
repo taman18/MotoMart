@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
-  Plus,
-  Search,
-  Edit2,
-  Trash2,
-  X,
-  Wrench,
-  ChevronUp,
-  ChevronDown,
+  Plus, Search, Edit2, Trash2, X, Wrench,
+  ChevronUp, ChevronDown, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
-import { parts as initialParts, CATEGORIES, BIKE_MODELS } from "@/lib/data";
-import { Part, Category, BikeBrand } from "@/lib/types";
-import StockBadge, { getStockStatus } from "@/components/store/StockBadge";
+import { CATEGORIES, BIKE_MODELS } from "@/lib/data";
+import type { Part, Category, BikeBrand } from "@/lib/types";
+import StockBadge from "@/components/store/StockBadge";
+import {
+  useListPartsQuery,
+  useCreatePartMutation,
+  useUpdatePartMutation,
+  useDeletePartMutation,
+  type CreatePartPayload,
+} from "@/store/api/partsApi";
 
 type ModalMode = "add" | "edit" | null;
+type SortField = "name" | "price" | "stock";
 
 interface FormState {
   name: string;
@@ -45,116 +47,117 @@ const emptyForm: FormState = {
   isSale: false,
 };
 
+const BRANDS: BikeBrand[] = ["Honda", "Hero", "Bajaj", "TVS", "Yamaha", "Suzuki", "Royal Enfield", "Universal"];
 const allBikes = Object.values(BIKE_MODELS).flat();
 
-export default function AdminPartsPage() {
-  const [allParts, setAllParts] = useState(initialParts);
-  const [search, setSearch] = useState("");
-  const [modal, setModal] = useState<ModalMode>(null);
-  const [editingPart, setEditingPart] = useState<Part | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<"name" | "price" | "stock">("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+function formToPayload(form: FormState): CreatePartPayload {
+  return {
+    name:            form.name.trim(),
+    description:     form.description.trim(),
+    category:        form.category,
+    brand:           form.brand,
+    price:           Number(form.price),
+    mrp:             Number(form.mrp) || Number(form.price),
+    stock:           Number(form.stock),
+    minStock:        Number(form.minStock) || 10,
+    images:          [],
+    compatibleBikes: form.compatibleBikes,
+    isFeatured:      form.isFeatured,
+    isSale:          form.isSale,
+  };
+}
 
-  const filtered = allParts
-    .filter(
-      (p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase()) ||
-        p.category.toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a, b) => {
-      const av = sortField === "name" ? a.name : sortField === "price" ? a.price : a.stock;
-      const bv = sortField === "name" ? b.name : sortField === "price" ? b.price : b.stock;
-      if (typeof av === "string" && typeof bv === "string")
-        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-      return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
-    });
+export default function AdminPartsPage() {
+  const [search, setSearch]           = useState("");
+  const [sortField, setSortField]     = useState<SortField>("name");
+  const [sortDir, setSortDir]         = useState<"asc" | "desc">("asc");
+  const [page, setPage]               = useState(1);
+  const [modal, setModal]             = useState<ModalMode>(null);
+  const [editingPart, setEditingPart] = useState<Part | null>(null);
+  const [form, setForm]               = useState<FormState>(emptyForm);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [formError, setFormError]     = useState<string | null>(null);
+
+  const queryParams = {
+    search:  search || undefined,
+    sortBy:  sortField === "stock" ? "stock" : sortField,
+    sortDir,
+    page,
+    limit:   20,
+  } as const;
+
+  const { data, isLoading, isError, refetch } = useListPartsQuery(queryParams);
+  const [createPart, { isLoading: creating }] = useCreatePartMutation();
+  const [updatePart, { isLoading: updating }] = useUpdatePartMutation();
+  const [deletePart, { isLoading: deleting }] = useDeletePartMutation();
+
+  const parts = data?.data.parts ?? [];
+  const meta  = data?.data.meta;
+  const isSaving = creating || updating;
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(field); setSortDir("asc"); }
+    setPage(1);
+  }
+
+  const handleSearch = useCallback((val: string) => {
+    setSearch(val);
+    setPage(1);
+  }, []);
 
   function openAdd() {
     setForm(emptyForm);
     setEditingPart(null);
+    setFormError(null);
     setModal("add");
   }
 
   function openEdit(part: Part) {
     setForm({
-      name: part.name,
-      description: part.description,
-      price: String(part.price),
-      mrp: String(part.mrp),
-      stock: String(part.stock),
-      minStock: String(part.minStock),
-      category: part.category,
-      brand: part.brand,
+      name:            part.name,
+      description:     part.description,
+      price:           String(part.price),
+      mrp:             String(part.mrp),
+      stock:           String(part.stock),
+      minStock:        String(part.minStock),
+      category:        part.category,
+      brand:           part.brand,
       compatibleBikes: part.compatibleBikes,
-      isFeatured: part.isFeatured,
-      isSale: part.isSale,
+      isFeatured:      part.isFeatured,
+      isSale:          part.isSale,
     });
     setEditingPart(part);
+    setFormError(null);
     setModal("edit");
   }
 
-  function handleSave() {
-    if (!form.name || !form.price || !form.stock) return;
-
-    if (modal === "add") {
-      const newPart: Part = {
-        id: String(Date.now()),
-        sku: `SKU-${Date.now().toString().slice(-6)}`,
-        name: form.name,
-        description: form.description,
-        price: Number(form.price),
-        mrp: Number(form.mrp) || Number(form.price),
-        stock: Number(form.stock),
-        minStock: Number(form.minStock),
-        category: form.category,
-        brand: form.brand,
-        compatibleBikes: form.compatibleBikes,
-        isFeatured: form.isFeatured,
-        isSale: form.isSale,
-        images: [],
-        rating: 0,
-        reviewCount: 0,
-      };
-      setAllParts((prev) => [newPart, ...prev]);
-    } else if (modal === "edit" && editingPart) {
-      setAllParts((prev) =>
-        prev.map((p) =>
-          p.id === editingPart.id
-            ? {
-                ...p,
-                name: form.name,
-                description: form.description,
-                price: Number(form.price),
-                mrp: Number(form.mrp) || Number(form.price),
-                stock: Number(form.stock),
-                minStock: Number(form.minStock),
-                category: form.category,
-                brand: form.brand,
-                compatibleBikes: form.compatibleBikes,
-                isFeatured: form.isFeatured,
-                isSale: form.isSale,
-              }
-            : p
-        )
-      );
+  async function handleSave() {
+    if (!form.name.trim() || !form.price || !form.stock) {
+      setFormError("Name, price and stock are required.");
+      return;
     }
-    setModal(null);
+    setFormError(null);
+    try {
+      if (modal === "add") {
+        await createPart(formToPayload(form)).unwrap();
+      } else if (modal === "edit" && editingPart) {
+        await updatePart({ id: editingPart.id, ...formToPayload(form) }).unwrap();
+      }
+      setModal(null);
+    } catch {
+      setFormError("Something went wrong. Please try again.");
+    }
   }
 
-  function handleDelete(id: string) {
-    setAllParts((prev) => prev.filter((p) => p.id !== id));
+  async function handleDelete(id: string) {
+    try {
+      await deletePart(id).unwrap();
+    } catch { /* toast would go here */ }
     setDeleteConfirm(null);
   }
 
-  function toggleSort(field: typeof sortField) {
-    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortField(field); setSortDir("asc"); }
-  }
-
-  const SortIcon = ({ field }: { field: typeof sortField }) =>
+  const SortIcon = ({ field }: { field: SortField }) =>
     sortField === field ? (
       sortDir === "asc" ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
     ) : null;
@@ -165,7 +168,9 @@ export default function AdminPartsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Parts Management</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{allParts.length} total parts</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {meta ? `${meta.total} total parts` : "Loading…"}
+          </p>
         </div>
         <button
           onClick={openAdd}
@@ -181,9 +186,9 @@ export default function AdminPartsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
-            placeholder="Search by name, SKU, or category..."
+            placeholder="Search by name, SKU, or description…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
@@ -191,88 +196,137 @@ export default function AdminPartsPage() {
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-10">
-                  #
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  <button onClick={() => toggleSort("name")} className="flex items-center gap-1">
-                    Name <SortIcon field="name" />
-                  </button>
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">SKU</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Category</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  <button onClick={() => toggleSort("price")} className="flex items-center gap-1">
-                    Price <SortIcon field="price" />
-                  </button>
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  <button onClick={() => toggleSort("stock")} className="flex items-center gap-1">
-                    Stock <SortIcon field="stock" />
-                  </button>
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-              {filtered.map((part, i) => (
-                <tr key={part.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                  <td className="px-5 py-3.5 text-gray-400 dark:text-gray-500 text-xs">{i + 1}</td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center shrink-0">
-                        <Wrench className="w-4 h-4 text-gray-300 dark:text-gray-500" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs leading-tight max-w-[180px] line-clamp-2">
-                          {part.name}
-                        </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{part.brand}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5 font-mono text-xs text-gray-500 dark:text-gray-400">{part.sku}</td>
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">
-                      {part.category}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 font-bold text-gray-900 dark:text-gray-100">
-                    ₹{part.price.toLocaleString("en-IN")}
-                  </td>
-                  <td className="px-5 py-3.5 text-gray-700 dark:text-gray-300 font-medium">{part.stock}</td>
-                  <td className="px-5 py-3.5">
-                    <StockBadge stock={part.stock} minStock={part.minStock} />
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openEdit(part)}
-                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(part.id)}
-                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20 gap-2 text-gray-400 dark:text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Loading parts…</span>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-500 dark:text-gray-400">
+            <AlertCircle className="w-6 h-6 text-red-400" />
+            <p className="text-sm">Failed to load parts.</p>
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-1.5 text-xs text-primary-600 hover:underline"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Retry
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-10">#</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <button onClick={() => toggleSort("name")} className="flex items-center gap-1">
+                      Name <SortIcon field="name" />
+                    </button>
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">SKU</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Category</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <button onClick={() => toggleSort("price")} className="flex items-center gap-1">
+                      Price <SortIcon field="price" />
+                    </button>
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <button onClick={() => toggleSort("stock")} className="flex items-center gap-1">
+                      Stock <SortIcon field="stock" />
+                    </button>
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                {parts.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-16 text-sm text-gray-400 dark:text-gray-500">
+                      No parts found. {search && "Try a different search term."}
+                    </td>
+                  </tr>
+                ) : parts.map((part, i) => (
+                  <tr key={part.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+                    <td className="px-5 py-3.5 text-gray-400 dark:text-gray-500 text-xs">
+                      {(page - 1) * 20 + i + 1}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center shrink-0">
+                          <Wrench className="w-4 h-4 text-gray-300 dark:text-gray-500" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs leading-tight max-w-[180px] line-clamp-2">
+                            {part.name}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{part.brand}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 font-mono text-xs text-gray-500 dark:text-gray-400">{part.sku}</td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">
+                        {part.category}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 font-bold text-gray-900 dark:text-gray-100">
+                      ₹{part.price.toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-700 dark:text-gray-300 font-medium">{part.stock}</td>
+                    <td className="px-5 py-3.5">
+                      <StockBadge stock={part.stock} minStock={part.minStock} />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEdit(part)}
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(part.id)}
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {meta && meta.pages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, meta.total)} of {meta.total}
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(meta.pages, p + 1))}
+                disabled={page === meta.pages}
+                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Delete Confirm */}
+      {/* Delete Confirm Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-sm w-full">
@@ -289,8 +343,10 @@ export default function AdminPartsPage() {
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirm)}
-                className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                disabled={deleting}
+                className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
               >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Delete
               </button>
             </div>
@@ -298,7 +354,7 @@ export default function AdminPartsPage() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Add / Edit Modal */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -312,6 +368,12 @@ export default function AdminPartsPage() {
             </div>
 
             <div className="p-6 space-y-5">
+              {formError && (
+                <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {formError}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Part Name *</label>
@@ -330,7 +392,7 @@ export default function AdminPartsPage() {
                     value={form.description}
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                     rows={3}
-                    placeholder="Part description..."
+                    placeholder="Part description…"
                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
@@ -386,9 +448,7 @@ export default function AdminPartsPage() {
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as Category }))}
                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
+                    {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
 
@@ -399,9 +459,7 @@ export default function AdminPartsPage() {
                     onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value as BikeBrand }))}
                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
-                    {["Honda", "Hero", "Bajaj", "TVS", "Yamaha", "Suzuki", "Royal Enfield", "Universal"].map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
+                    {BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
 
@@ -475,8 +533,10 @@ export default function AdminPartsPage() {
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 py-2.5 bg-primary-800 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold transition-colors"
+                disabled={isSaving}
+                className="flex-1 py-2.5 bg-primary-800 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
               >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {modal === "add" ? "Add Part" : "Save Changes"}
               </button>
             </div>

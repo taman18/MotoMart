@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import StoreProvider from "@/store/StoreProvider";
 import { CartProvider } from "@/context/CartContext";
-import { AuthProvider } from "@/context/AuthContext";
+import AuthContext from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "MotoMart — India's 2-Wheeler Spare Parts Store",
@@ -26,9 +27,7 @@ export const metadata: Metadata = {
       { url: "/icons/icon-152x152.svg", sizes: "152x152", type: "image/svg+xml" },
       { url: "/icons/icon-192x192.svg", sizes: "192x192", type: "image/svg+xml" },
     ],
-    other: [
-      { rel: "mask-icon", url: "/favicon.svg" },
-    ],
+    other: [{ rel: "mask-icon", url: "/favicon.svg" }],
   },
   openGraph: {
     type: "website",
@@ -54,11 +53,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <CartProvider>
-            {children}
-          </CartProvider>
-        </AuthProvider>
+        {/* StoreProvider wraps everything — provides Redux store + rehydrates auth */}
+        <StoreProvider>
+          {/* AuthContext bridges Redux state to legacy context consumers */}
+          <AuthContext>
+            <CartProvider>
+              {children}
+            </CartProvider>
+          </AuthContext>
+        </StoreProvider>
       </body>
     </html>
   );

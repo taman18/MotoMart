@@ -7,7 +7,8 @@ import {
   Star, ArrowRight, Disc, Cog, Zap, Filter, Car, Circle, Droplets,
 } from "lucide-react";
 import PartCard from "@/components/store/PartCard";
-import { parts, BIKE_BRANDS } from "@/lib/data";
+import { useListPartsQuery } from "@/store/api/partsApi";
+import { useListBrandsQuery } from "@/store/api/brandsApi";
 
 const categories = [
   { name: "Brakes",            icon: Disc,     count: 48,  color: "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400" },
@@ -19,26 +20,16 @@ const categories = [
   { name: "Oils & Lubricants", icon: Droplets, count: 28,  color: "bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400" },
 ];
 
-const brandColors: Record<string, string> = {
-  Honda:          "border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20",
-  Hero:           "border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-  Bajaj:          "border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20",
-  TVS:            "border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20",
-  Yamaha:         "border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20",
-  Suzuki:         "border-yellow-200 dark:border-yellow-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
-  "Royal Enfield":"border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/40",
-  Universal:      "border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-900/20",
-};
-
-const brandInitials: Record<string, string> = {
-  Honda: "H", Hero: "He", Bajaj: "Bj", TVS: "TVS",
-  Yamaha: "Y", Suzuki: "Sz", "Royal Enfield": "RE", Universal: "U",
-};
 
 export default function HomePage() {
-  const [selectedBrand, setSelectedBrand] = useState("Honda");
+  const [selectedBrand, setSelectedBrand] = useState("");
   const [partSearch, setPartSearch] = useState("");
-  const featuredParts = parts.filter((p) => p.isFeatured);
+
+  const { data: brandsData } = useListBrandsQuery();
+  const brandList = brandsData?.data.brands ?? [];
+
+  const { data: featuredData } = useListPartsQuery({ sortBy: "createdAt", sortDir: "desc", limit: 8 });
+  const featuredParts = (featuredData?.data.parts ?? []).filter((p) => p.isFeatured);
 
   return (
     <main>
@@ -64,8 +55,9 @@ export default function HomePage() {
                 onChange={(e) => setSelectedBrand(e.target.value)}
                 className="flex-none text-gray-900 dark:text-gray-100 text-sm font-medium rounded-xl px-4 py-3 bg-gray-100 dark:bg-gray-700 border-0 outline-none cursor-pointer"
               >
-                {BIKE_BRANDS.filter((b) => b !== "Universal").map((brand) => (
-                  <option key={brand} value={brand}>{brand}</option>
+                <option value="">All Brands</option>
+                {brandList.filter((b) => b.name !== "Universal").map((brand) => (
+                  <option key={brand.id} value={brand.name}>{brand.name}</option>
                 ))}
               </select>
               <input
@@ -99,16 +91,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide pb-1">
             <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">Shop by Brand:</span>
-            {Object.keys(brandInitials).map((brand) => (
+            {brandList.map((brand) => (
               <Link
-                key={brand}
-                href={`/parts?brand=${brand}`}
-                className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border-2 bg-white dark:bg-gray-800 transition-all font-medium text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white ${brandColors[brand]}`}
+                key={brand.id}
+                href={`/parts?brand=${brand.name}`}
+                className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border-2 bg-white dark:bg-gray-800 transition-all font-medium text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white ${brand.color}`}
               >
                 <span className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
-                  {brandInitials[brand]}
+                  {brand.initials}
                 </span>
-                {brand}
+                {brand.name}
               </Link>
             ))}
           </div>

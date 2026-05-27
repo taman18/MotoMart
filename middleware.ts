@@ -1,30 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
 const SESSION_KEY = "motomart_session";
+const SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET ?? "motomart-dev-secret-change-in-production"
+);
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip the login page itself
   if (pathname === "/admin/login") return NextResponse.next();
 
-  // Protect all other /admin/* routes
   if (pathname.startsWith("/admin")) {
-    const raw = request.cookies.get(SESSION_KEY)?.value;
+    const token = request.cookies.get(SESSION_KEY)?.value;
 
-    let isAdmin = false;
-    if (raw) {
-      try {
-        const session = JSON.parse(raw);
-        isAdmin = session?.role === "admin";
-      } catch {
-        // malformed cookie
-      }
+    if (!token) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
-    if (!isAdmin) {
-      const loginUrl = new URL("/admin/login", request.url);
-      return NextResponse.redirect(loginUrl);
+    try {
+      const { payload } = await jwtVerify(token, SECRET, { issuer: "motomart" });
+      if (payload?.role !== "admin") {
+        return NextResponse.redirect(new URL("/admin/login", request.url));
+      }
+    } catch {
+      // Token invalid or expired
+      const res = NextResponse.redirect(new URL("/admin/login", request.url));
+      res.cookies.delete(SESSION_KEY);
+      return res;
     }
   }
 

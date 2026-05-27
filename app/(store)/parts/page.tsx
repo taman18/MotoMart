@@ -1,113 +1,124 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
-import { SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, Suspense } from "react";
+import { SlidersHorizontal, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import PartCard from "@/components/store/PartCard";
-import { parts, BIKE_BRANDS, CATEGORIES } from "@/lib/data";
+import { BIKE_BRANDS, CATEGORIES } from "@/lib/data";
 import { useSearchParams } from "next/navigation";
+import { useListPartsQuery } from "@/store/api/partsApi";
+import type { Category, BikeBrand } from "@/lib/types";
 
 const PARTS_PER_PAGE = 8;
-type SortKey = "default" | "price_asc" | "price_desc" | "rating" | "newest";
+type SortKey = "default" | "price_asc" | "price_desc" | "newest";
 
 function PartsContent() {
-  const searchParams = useSearchParams();
-  const initialBrand    = searchParams.get("brand") || "";
-  const initialCategory = searchParams.get("category") || "";
-  const initialSearch   = searchParams.get("search") || "";
+  const searchParams     = useSearchParams();
+  const initialBrand     = (searchParams.get("brand") || "") as BikeBrand | "";
+  const initialCategory  = (searchParams.get("category") || "") as Category | "";
+  const initialSearch    = searchParams.get("search") || "";
 
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
-  const [selectedBrands, setSelectedBrands]         = useState<string[]>(initialBrand    ? [initialBrand]    : []);
-  const [priceMax, setPriceMax]     = useState(5000);
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [sort, setSort]             = useState<SortKey>("default");
-  const [searchQuery]               = useState(initialSearch);
-  const [page, setPage]             = useState(1);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>(initialCategory ? [initialCategory] : []);
+  const [selectedBrands, setSelectedBrands]         = useState<BikeBrand[]>(initialBrand    ? [initialBrand]    : []);
+  const [inStockOnly, setInStockOnly]               = useState(false);
+  const [sort, setSort]                             = useState<SortKey>("default");
+  const [page, setPage]                             = useState(1);
+  const [sidebarOpen, setSidebarOpen]               = useState(false);
 
-  const filtered = useMemo(() => {
-    let result = [...parts];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.compatibleBikes.some((b) => b.toLowerCase().includes(q))
-      );
-    }
-    if (selectedCategories.length) result = result.filter((p) => selectedCategories.includes(p.category));
-    if (selectedBrands.length)
-      result = result.filter((p) =>
-        selectedBrands.includes(p.brand) ||
-        p.compatibleBikes.some((b) => selectedBrands.some((br) => b.includes(br)))
-      );
-    result = result.filter((p) => p.price <= priceMax);
-    if (inStockOnly) result = result.filter((p) => p.stock > 0);
-    switch (sort) {
-      case "price_asc":  result.sort((a, b) => a.price - b.price); break;
-      case "price_desc": result.sort((a, b) => b.price - a.price); break;
-      case "rating":     result.sort((a, b) => b.rating - a.rating); break;
-      case "newest":     result.sort((a, b) => Number(b.id) - Number(a.id)); break;
-    }
-    return result;
-  }, [searchQuery, selectedCategories, selectedBrands, priceMax, inStockOnly, sort]);
+  // Map UI sort key → API sort params
+  const sortMap: Record<SortKey, { sortBy: "name" | "price" | "stock" | "createdAt"; sortDir: "asc" | "desc" }> = {
+    default:    { sortBy: "createdAt", sortDir: "desc" },
+    price_asc:  { sortBy: "price",     sortDir: "asc"  },
+    price_desc: { sortBy: "price",     sortDir: "desc" },
+    newest:     { sortBy: "createdAt", sortDir: "desc" },
+  };
 
-  const totalPages = Math.ceil(filtered.length / PARTS_PER_PAGE);
-  const paginated  = filtered.slice((page - 1) * PARTS_PER_PAGE, page * PARTS_PER_PAGE);
+  const { data, isLoading, isFetching } = useListPartsQuery({
+    search:   initialSearch || undefined,
+    category: selectedCategories.length === 1 ? selectedCategories[0] : undefined,
+    brand:    selectedBrands.length    === 1 ? selectedBrands[0]    : undefined,
+    ...sortMap[sort],
+    page,
+    limit: PARTS_PER_PAGE,
+  });
 
-  function toggleCategory(cat: string) { setSelectedCategories((p) => p.includes(cat) ? p.filter((c) => c !== cat) : [...p, cat]); setPage(1); }
-  function toggleBrand(brand: string)  { setSelectedBrands((p) => p.includes(brand) ? p.filter((b) => b !== brand) : [...p, brand]); setPage(1); }
+  const parts      = data?.data.parts ?? [];
+  const meta       = data?.data.meta;
+  const totalPages = meta?.pages ?? 1;
+
+  // Client-side multi-filter (category/brand multi-select, in-stock, price)
+  const filtered = parts.filter((p) => {
+    if (selectedCategories.length > 1 && !selectedCategories.includes(p.category as Category)) return false;
+    if (selectedBrands.length    > 1 && !selectedBrands.includes(p.brand as BikeBrand))        return false;
+    if (inStockOnly && p.stock === 0) return false;
+    return true;
+  });
+
+  function toggleCategory(cat: Category) {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+    setPage(1);
+  }
+  function toggleBrand(brand: BikeBrand) {
+    setSelectedBrands((prev) =>
+      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+    );
+    setPage(1);
+  }
 
   const FilterPanel = () => (
     <aside className="space-y-6">
-      {/* Category */}
       <div>
         <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 text-sm uppercase tracking-wide">Category</h3>
         <div className="space-y-2">
           {CATEGORIES.map((cat) => (
             <label key={cat} className="flex items-center gap-2.5 cursor-pointer group">
-              <input type="checkbox" checked={selectedCategories.includes(cat)} onChange={() => toggleCategory(cat)} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-primary-700" />
+              <input
+                type="checkbox"
+                checked={selectedCategories.includes(cat as Category)}
+                onChange={() => toggleCategory(cat as Category)}
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-primary-700"
+              />
               <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{cat}</span>
             </label>
           ))}
         </div>
       </div>
 
-      {/* Brand */}
       <div>
         <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 text-sm uppercase tracking-wide">Bike Brand</h3>
         <div className="space-y-2">
           {BIKE_BRANDS.filter((b) => b !== "Universal").map((brand) => (
             <label key={brand} className="flex items-center gap-2.5 cursor-pointer group">
-              <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-primary-700" />
+              <input
+                type="checkbox"
+                checked={selectedBrands.includes(brand as BikeBrand)}
+                onChange={() => toggleBrand(brand as BikeBrand)}
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-primary-700"
+              />
               <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{brand}</span>
             </label>
           ))}
         </div>
       </div>
 
-      {/* Price */}
-      <div>
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 text-sm uppercase tracking-wide">Max Price</h3>
-        <input type="range" min={100} max={5000} step={50} value={priceMax} onChange={(e) => { setPriceMax(Number(e.target.value)); setPage(1); }} className="w-full accent-accent-500" />
-        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-          <span>₹100</span>
-          <span className="font-semibold text-gray-900 dark:text-gray-100">₹{priceMax.toLocaleString("en-IN")}</span>
-          <span>₹5,000</span>
-        </div>
-      </div>
-
-      {/* In Stock */}
       <div>
         <label className="flex items-center gap-2.5 cursor-pointer">
-          <div onClick={() => { setInStockOnly(!inStockOnly); setPage(1); }} className={`w-10 h-5 rounded-full transition-colors relative ${inStockOnly ? "bg-primary-700" : "bg-gray-200 dark:bg-gray-600"}`}>
+          <div
+            onClick={() => { setInStockOnly(!inStockOnly); setPage(1); }}
+            className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${inStockOnly ? "bg-primary-700" : "bg-gray-200 dark:bg-gray-600"}`}
+          >
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${inStockOnly ? "translate-x-5" : "translate-x-0"}`} />
           </div>
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">In Stock Only</span>
         </label>
       </div>
 
-      {(selectedCategories.length > 0 || selectedBrands.length > 0 || inStockOnly || priceMax < 5000) && (
-        <button onClick={() => { setSelectedCategories([]); setSelectedBrands([]); setPriceMax(5000); setInStockOnly(false); setPage(1); }} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 font-medium flex items-center gap-1">
+      {(selectedCategories.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
+        <button
+          onClick={() => { setSelectedCategories([]); setSelectedBrands([]); setInStockOnly(false); setPage(1); }}
+          className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 font-medium flex items-center gap-1"
+        >
           <X className="w-3.5 h-3.5" /> Clear Filters
         </button>
       )}
@@ -121,10 +132,14 @@ function PartsContent() {
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Spare Parts</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {filtered.length} part{filtered.length !== 1 ? "s" : ""} found{searchQuery && ` for "${searchQuery}"`}
+              {isLoading ? "Loading…" : `${meta?.total ?? 0} part${(meta?.total ?? 0) !== 1 ? "s" : ""} found`}
+              {initialSearch && ` for "${initialSearch}"`}
             </p>
           </div>
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden flex items-center gap-2 bg-primary-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden flex items-center gap-2 bg-primary-800 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          >
             <SlidersHorizontal className="w-4 h-4" /> Filters
           </button>
         </div>
@@ -139,7 +154,7 @@ function PartsContent() {
             </div>
           </div>
 
-          {/* Mobile sidebar overlay */}
+          {/* Mobile sidebar */}
           {sidebarOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
               <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
@@ -153,22 +168,33 @@ function PartsContent() {
             </div>
           )}
 
-          {/* Main */}
+          {/* Main grid */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-6">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Showing {(page - 1) * PARTS_PER_PAGE + 1}–{Math.min(page * PARTS_PER_PAGE, filtered.length)} of {filtered.length}
+              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                {isFetching && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {meta && !isLoading && (
+                  <>Showing {(page - 1) * PARTS_PER_PAGE + 1}–{Math.min(page * PARTS_PER_PAGE, meta.total)} of {meta.total}</>
+                )}
               </p>
-              <select value={sort} onChange={(e) => { setSort(e.target.value as SortKey); setPage(1); }} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none">
+              <select
+                value={sort}
+                onChange={(e) => { setSort(e.target.value as SortKey); setPage(1); }}
+                className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none"
+              >
                 <option value="default">Sort: Default</option>
                 <option value="price_asc">Price: Low to High</option>
                 <option value="price_desc">Price: High to Low</option>
-                <option value="rating">Best Rated</option>
                 <option value="newest">Newest First</option>
               </select>
             </div>
 
-            {paginated.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-32 text-gray-400 dark:text-gray-500 gap-2">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Loading parts…</span>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="text-center py-20 text-gray-400 dark:text-gray-500">
                 <p className="text-5xl mb-4">🔍</p>
                 <p className="text-lg font-semibold text-gray-600 dark:text-gray-400">No parts found</p>
@@ -176,21 +202,37 @@ function PartsContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-                {paginated.map((part) => <PartCard key={part.id} part={part} />)}
+                {filtered.map((part) => <PartCard key={part.id} part={part} />)}
               </div>
             )}
 
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-10">
-                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
                   <ChevronLeft className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button key={p} onClick={() => setPage(p)} className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${p === page ? "bg-primary-800 text-white" : "border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}>
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                      p === page
+                        ? "bg-primary-800 text-white"
+                        : "border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
                     {p}
                   </button>
                 ))}
-                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
                   <ChevronRight className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                 </button>
               </div>
@@ -204,7 +246,11 @@ function PartsContent() {
 
 export default function PartsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-gray-500 dark:text-gray-400">Loading...</div>}>
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen gap-2 text-gray-500 dark:text-gray-400">
+        <Loader2 className="w-5 h-5 animate-spin" /> Loading…
+      </div>
+    }>
       <PartsContent />
     </Suspense>
   );

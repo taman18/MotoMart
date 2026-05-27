@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import {
   Plus, Search, Edit2, Trash2, X, Wrench,
   ChevronUp, ChevronDown, Loader2, AlertCircle, RefreshCw,
+  Mic, SlidersHorizontal,
 } from "lucide-react";
 import { CATEGORIES, BIKE_MODELS } from "@/lib/data";
 import type { Part, Category, BikeBrand } from "@/lib/types";
@@ -15,8 +16,18 @@ import {
   useDeletePartMutation,
   type CreatePartPayload,
 } from "@/store/api/partsApi";
+import { useAppSelector } from "@/store/hooks";
+import { selectAccessToken } from "@/store/slices/authSlice";
+import VoiceAddTab, {
+  emptyVoiceForm,
+  voiceFormToPayload,
+  type VoiceFormState,
+} from "@/components/admin/VoiceAddTab";
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 type ModalMode = "add" | "edit" | null;
+type AddTab    = "manual" | "voice";
 type SortField = "name" | "price" | "stock";
 
 interface FormState {
@@ -33,21 +44,17 @@ interface FormState {
   isSale: boolean;
 }
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+
 const emptyForm: FormState = {
-  name: "",
-  description: "",
-  price: "",
-  mrp: "",
-  stock: "",
-  minStock: "10",
-  category: "Brakes",
-  brand: "Honda",
-  compatibleBikes: [],
-  isFeatured: false,
-  isSale: false,
+  name: "", description: "", price: "", mrp: "", stock: "", minStock: "10",
+  category: "Brakes", brand: "Honda",
+  compatibleBikes: [], isFeatured: false, isSale: false,
 };
 
-const BRANDS: BikeBrand[] = ["Honda", "Hero", "Bajaj", "TVS", "Yamaha", "Suzuki", "Royal Enfield", "Universal"];
+const BRANDS: BikeBrand[] = [
+  "Honda", "Hero", "Bajaj", "TVS", "Yamaha", "Suzuki", "Royal Enfield", "Universal",
+];
 const allBikes = Object.values(BIKE_MODELS).flat();
 
 function formToPayload(form: FormState): CreatePartPayload {
@@ -67,23 +74,36 @@ function formToPayload(form: FormState): CreatePartPayload {
   };
 }
 
-export default function AdminPartsPage() {
-  const [search, setSearch]           = useState("");
-  const [sortField, setSortField]     = useState<SortField>("name");
-  const [sortDir, setSortDir]         = useState<"asc" | "desc">("asc");
-  const [page, setPage]               = useState(1);
-  const [modal, setModal]             = useState<ModalMode>(null);
-  const [editingPart, setEditingPart] = useState<Part | null>(null);
-  const [form, setForm]               = useState<FormState>(emptyForm);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [formError, setFormError]     = useState<string | null>(null);
+// ── Page ───────────────────────────────────────────────────────────────────────
 
+export default function AdminPartsPage() {
+  const accessToken = useAppSelector(selectAccessToken);
+
+  // List state
+  const [search, setSearch]       = useState("");
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDir, setSortDir]     = useState<"asc" | "desc">("asc");
+  const [page, setPage]           = useState(1);
+
+  // Modal state
+  const [modal, setModal]                 = useState<ModalMode>(null);
+  const [addTab, setAddTab]               = useState<AddTab>("manual");
+  const [editingPart, setEditingPart]     = useState<Part | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [formError, setFormError]         = useState<string | null>(null);
+
+  // Manual form
+  const [form, setForm] = useState<FormState>(emptyForm);
+
+  // Voice form
+  const [voiceForm, setVoiceForm]           = useState<VoiceFormState>(emptyVoiceForm);
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+
+  // RTK Query
   const queryParams = {
-    search:  search || undefined,
-    sortBy:  sortField === "stock" ? "stock" : sortField,
-    sortDir,
-    page,
-    limit:   20,
+    search: search || undefined,
+    sortBy: sortField === "stock" ? "stock" : sortField,
+    sortDir, page, limit: 20,
   } as const;
 
   const { data, isLoading, isError, refetch } = useListPartsQuery(queryParams);
@@ -91,9 +111,11 @@ export default function AdminPartsPage() {
   const [updatePart, { isLoading: updating }] = useUpdatePartMutation();
   const [deletePart, { isLoading: deleting }] = useDeletePartMutation();
 
-  const parts = data?.data.parts ?? [];
-  const meta  = data?.data.meta;
+  const parts   = data?.data.parts ?? [];
+  const meta    = data?.data.meta;
   const isSaving = creating || updating;
+
+  // ── Handlers ──────────────────────────────────────────────────────────────────
 
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -101,15 +123,15 @@ export default function AdminPartsPage() {
     setPage(1);
   }
 
-  const handleSearch = useCallback((val: string) => {
-    setSearch(val);
-    setPage(1);
-  }, []);
+  const handleSearch = useCallback((val: string) => { setSearch(val); setPage(1); }, []);
 
   function openAdd() {
     setForm(emptyForm);
+    setVoiceForm(emptyVoiceForm);
+    setAiFilledFields(new Set());
     setEditingPart(null);
     setFormError(null);
+    setAddTab("manual");
     setModal("add");
   }
 
@@ -133,16 +155,28 @@ export default function AdminPartsPage() {
   }
 
   async function handleSave() {
-    if (!form.name.trim() || !form.price || !form.stock) {
-      setFormError("Name, price and stock are required.");
-      return;
+    let payload: CreatePartPayload;
+
+    if (modal === "add" && addTab === "voice") {
+      if (!voiceForm.name.trim() || !voiceForm.price || !voiceForm.stock) {
+        setFormError("Name, price and stock are required.");
+        return;
+      }
+      payload = voiceFormToPayload(voiceForm);
+    } else {
+      if (!form.name.trim() || !form.price || !form.stock) {
+        setFormError("Name, price and stock are required.");
+        return;
+      }
+      payload = formToPayload(form);
     }
+
     setFormError(null);
     try {
       if (modal === "add") {
-        await createPart(formToPayload(form)).unwrap();
+        await createPart(payload).unwrap();
       } else if (modal === "edit" && editingPart) {
-        await updatePart({ id: editingPart.id, ...formToPayload(form) }).unwrap();
+        await updatePart({ id: editingPart.id, ...payload }).unwrap();
       }
       setModal(null);
     } catch {
@@ -151,9 +185,7 @@ export default function AdminPartsPage() {
   }
 
   async function handleDelete(id: string) {
-    try {
-      await deletePart(id).unwrap();
-    } catch { /* toast would go here */ }
+    try { await deletePart(id).unwrap(); } catch { /* ignore */ }
     setDeleteConfirm(null);
   }
 
@@ -162,8 +194,11 @@ export default function AdminPartsPage() {
       sortDir === "asc" ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
     ) : null;
 
+  // ── Render ────────────────────────────────────────────────────────────────────
+
   return (
     <div className="p-6">
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -205,10 +240,7 @@ export default function AdminPartsPage() {
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-500 dark:text-gray-400">
             <AlertCircle className="w-6 h-6 text-red-400" />
             <p className="text-sm">Failed to load parts.</p>
-            <button
-              onClick={() => refetch()}
-              className="flex items-center gap-1.5 text-xs text-primary-600 hover:underline"
-            >
+            <button onClick={() => refetch()} className="flex items-center gap-1.5 text-xs text-primary-600 hover:underline">
               <RefreshCw className="w-3.5 h-3.5" /> Retry
             </button>
           </div>
@@ -219,21 +251,15 @@ export default function AdminPartsPage() {
                 <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-10">#</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    <button onClick={() => toggleSort("name")} className="flex items-center gap-1">
-                      Name <SortIcon field="name" />
-                    </button>
+                    <button onClick={() => toggleSort("name")} className="flex items-center gap-1">Name <SortIcon field="name" /></button>
                   </th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">SKU</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Category</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    <button onClick={() => toggleSort("price")} className="flex items-center gap-1">
-                      Price <SortIcon field="price" />
-                    </button>
+                    <button onClick={() => toggleSort("price")} className="flex items-center gap-1">Price <SortIcon field="price" /></button>
                   </th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    <button onClick={() => toggleSort("stock")} className="flex items-center gap-1">
-                      Stock <SortIcon field="stock" />
-                    </button>
+                    <button onClick={() => toggleSort("stock")} className="flex items-center gap-1">Stock <SortIcon field="stock" /></button>
                   </th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Actions</th>
@@ -248,35 +274,25 @@ export default function AdminPartsPage() {
                   </tr>
                 ) : parts.map((part, i) => (
                   <tr key={part.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                    <td className="px-5 py-3.5 text-gray-400 dark:text-gray-500 text-xs">
-                      {(page - 1) * 20 + i + 1}
-                    </td>
+                    <td className="px-5 py-3.5 text-gray-400 dark:text-gray-500 text-xs">{(page - 1) * 20 + i + 1}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center shrink-0">
                           <Wrench className="w-4 h-4 text-gray-300 dark:text-gray-500" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs leading-tight max-w-[180px] line-clamp-2">
-                            {part.name}
-                          </p>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs leading-tight max-w-[180px] line-clamp-2">{part.name}</p>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{part.brand}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 font-mono text-xs text-gray-500 dark:text-gray-400">{part.sku}</td>
                     <td className="px-5 py-3.5">
-                      <span className="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">
-                        {part.category}
-                      </span>
+                      <span className="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full font-medium">{part.category}</span>
                     </td>
-                    <td className="px-5 py-3.5 font-bold text-gray-900 dark:text-gray-100">
-                      ₹{part.price.toLocaleString("en-IN")}
-                    </td>
+                    <td className="px-5 py-3.5 font-bold text-gray-900 dark:text-gray-100">₹{part.price.toLocaleString("en-IN")}</td>
                     <td className="px-5 py-3.5 text-gray-700 dark:text-gray-300 font-medium">{part.stock}</td>
-                    <td className="px-5 py-3.5">
-                      <StockBadge stock={part.stock} minStock={part.minStock} />
-                    </td>
+                    <td className="px-5 py-3.5"><StockBadge stock={part.stock} minStock={part.minStock} /></td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1">
                         <button
@@ -326,14 +342,12 @@ export default function AdminPartsPage() {
         )}
       </div>
 
-      {/* Delete Confirm Modal */}
+      {/* ── Delete Confirm ── */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Part?</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-              This action cannot be undone. The part will be permanently removed.
-            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">This action cannot be undone. The part will be permanently removed.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
@@ -354,11 +368,13 @@ export default function AdminPartsPage() {
         </div>
       )}
 
-      {/* Add / Edit Modal */}
+      {/* ── Add / Edit Modal ── */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
               <h2 className="font-bold text-gray-900 dark:text-gray-100">
                 {modal === "add" ? "Add New Part" : "Edit Part"}
               </h2>
@@ -367,164 +383,176 @@ export default function AdminPartsPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
-              {formError && (
-                <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
-                  <AlertCircle className="w-4 h-4 shrink-0" /> {formError}
-                </div>
-              )}
+            {/* Tab switcher — only on Add modal */}
+            {modal === "add" && (
+              <div className="flex gap-1 px-6 pt-4 shrink-0">
+                <button
+                  onClick={() => setAddTab("manual")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    addTab === "manual"
+                      ? "bg-primary-700 text-white"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Manual
+                </button>
+                <button
+                  onClick={() => setAddTab("voice")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    addTab === "voice"
+                      ? "bg-primary-700 text-white"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  <Mic className="w-4 h-4" />
+                  Voice Add
+                  <span className="text-xs bg-accent-500 text-white px-1.5 py-0.5 rounded-full leading-none">AI</span>
+                </button>
+              </div>
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Part Name *</label>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="e.g. Honda Activa 6G Brake Pad Set"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                  />
-                </div>
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-5">
 
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                    rows={3}
-                    placeholder="Part description…"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                  />
-                </div>
+                {/* Shared error banner */}
+                {formError && (
+                  <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 shrink-0" /> {formError}
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Price (₹) *</label>
-                  <input
-                    type="number"
-                    value={form.price}
-                    onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                    placeholder="450"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
+                {/* ── Manual tab (add) or Edit form ── */}
+                {(modal === "edit" || addTab === "manual") && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Part Name *</label>
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="e.g. Honda Activa 6G Brake Pad Set"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">MRP (₹)</label>
-                  <input
-                    type="number"
-                    value={form.mrp}
-                    onChange={(e) => setForm((f) => ({ ...f, mrp: e.target.value }))}
-                    placeholder="550"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                      <textarea
+                        value={form.description}
+                        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                        rows={3}
+                        placeholder="Part description…"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Stock *</label>
-                  <input
-                    type="number"
-                    value={form.stock}
-                    onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-                    placeholder="50"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Price (₹) *</label>
+                      <input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="450"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">MRP (₹)</label>
+                      <input type="number" value={form.mrp} onChange={(e) => setForm((f) => ({ ...f, mrp: e.target.value }))} placeholder="550"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Stock *</label>
+                      <input type="number" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} placeholder="50"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Min Stock Alert</label>
+                      <input type="number" value={form.minStock} onChange={(e) => setForm((f) => ({ ...f, minStock: e.target.value }))} placeholder="10"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Min Stock Alert</label>
-                  <input
-                    type="number"
-                    value={form.minStock}
-                    onChange={(e) => setForm((f) => ({ ...f, minStock: e.target.value }))}
-                    placeholder="10"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                      <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as Category }))}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      >
+                        {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Brand</label>
+                      <select value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value as BikeBrand }))}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      >
+                        {BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as Category }))}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Brand</label>
-                  <select
-                    value={form.brand}
-                    onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value as BikeBrand }))}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    {BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Compatible Bikes ({form.compatibleBikes.length} selected)
-                  </label>
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto grid grid-cols-2 gap-1.5 bg-white dark:bg-gray-700">
-                    {allBikes.map((bike) => (
-                      <label key={bike} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={form.compatibleBikes.includes(bike)}
-                          onChange={(e) =>
-                            setForm((f) => ({
-                              ...f,
-                              compatibleBikes: e.target.checked
-                                ? [...f.compatibleBikes, bike]
-                                : f.compatibleBikes.filter((b) => b !== bike),
-                            }))
-                          }
-                          className="w-3.5 h-3.5 rounded accent-primary-700"
-                        />
-                        <span className="text-xs text-gray-700 dark:text-gray-300">{bike}</span>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Compatible Bikes ({form.compatibleBikes.length} selected)
                       </label>
-                    ))}
-                  </div>
-                </div>
+                      <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto grid grid-cols-2 gap-1.5 bg-white dark:bg-gray-700">
+                        {allBikes.map((bike) => (
+                          <label key={bike} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={form.compatibleBikes.includes(bike)}
+                              onChange={(e) => setForm((f) => ({
+                                ...f,
+                                compatibleBikes: e.target.checked
+                                  ? [...f.compatibleBikes, bike]
+                                  : f.compatibleBikes.filter((b) => b !== bike),
+                              }))}
+                              className="w-3.5 h-3.5 rounded accent-primary-700"
+                            />
+                            <span className="text-xs text-gray-700 dark:text-gray-300">{bike}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
 
-                <div className="sm:col-span-2 flex gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.isFeatured}
-                      onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))}
-                      className="w-4 h-4 rounded accent-primary-700"
-                    />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Featured Part</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.isSale}
-                      onChange={(e) => setForm((f) => ({ ...f, isSale: e.target.checked }))}
-                      className="w-4 h-4 rounded accent-primary-700"
-                    />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">On Sale</span>
-                  </label>
-                </div>
+                    <div className="sm:col-span-2 flex gap-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))} className="w-4 h-4 rounded accent-primary-700" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Featured Part</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={form.isSale} onChange={(e) => setForm((f) => ({ ...f, isSale: e.target.checked }))} className="w-4 h-4 rounded accent-primary-700" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">On Sale</span>
+                      </label>
+                    </div>
 
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Product Image Upload
-                  </label>
-                  <div className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center text-gray-400 dark:text-gray-500 text-sm">
-                    <Wrench className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                    <p>Click to upload or drag and drop</p>
-                    <p className="text-xs mt-0.5">PNG, JPG up to 2MB</p>
-                    <input type="file" className="hidden" accept="image/*" />
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Product Image Upload</label>
+                      <div className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-6 text-center text-gray-400 dark:text-gray-500 text-sm">
+                        <Wrench className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                        <p>Click to upload or drag and drop</p>
+                        <p className="text-xs mt-0.5">PNG, JPG up to 2MB</p>
+                        <input type="file" className="hidden" accept="image/*" />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* ── Voice Add tab ── */}
+                {modal === "add" && addTab === "voice" && (
+                  <VoiceAddTab
+                    form={voiceForm}
+                    onChange={setVoiceForm}
+                    aiFilledFields={aiFilledFields}
+                    onAiFilled={setAiFilledFields}
+                    accessToken={accessToken}
+                  />
+                )}
+
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 sticky bottom-0 bg-white dark:bg-gray-800">
+            {/* Sticky footer */}
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 shrink-0">
               <button
                 onClick={() => setModal(null)}
                 className="flex-1 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
@@ -540,6 +568,7 @@ export default function AdminPartsPage() {
                 {modal === "add" ? "Add Part" : "Save Changes"}
               </button>
             </div>
+
           </div>
         </div>
       )}

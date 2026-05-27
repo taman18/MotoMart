@@ -536,6 +536,81 @@ brands.delete("/:id", requireAuth, requireAdmin, async (c) => {
 
 app.route("/brands", brands);
 
+// ── Voice-parse (admin only) ───────────────────────────────────────────────────
+// POST /api/voice-parse  { transcript: string }
+// Uses Groq (free tier) with Llama 3.1 to extract structured product data from speech.
+const VOICE_CATEGORIES = [
+  "Brakes", "Engine Parts", "Electrical", "Filters",
+  "Body Parts", "Tyres & Tubes", "Oils & Lubricants",
+] as const;
+
+const VOICE_SYSTEM_PROMPT = `You are an automobile parts data entry assistant for an Indian e-commerce store.
+Extract product details from spoken input and return ONLY a valid JSON object with these exact keys:
+name, part_number, category, price, stock, brand, description, compatible_vehicles.
+
+Rules:
+- category must be one of: ${VOICE_CATEGORIES.join(", ")}
+- price must be a number only (no ₹ symbol, no commas)
+- stock must be a number only
+- compatible_vehicles should be a comma-separated string of vehicle names
+- If a field is not mentioned, return empty string "" for it (empty number fields return 0)
+- If category is not explicitly said but can be inferred from product name, infer it
+- Do not return markdown, backticks, or any explanation — pure JSON only`;
+
+app.post("/voice-parse", requireAuth, requireAdmin, async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const transcript: string = body?.transcript ?? "";
+
+  if (!transcript || transcript.trim().length < 3) {
+    return errorResponse(c, new ApiError(400, "Transcript is too short. Please speak clearly.", "TRANSCRIPT_TOO_SHORT"));
+  }
+
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    return errorResponse(c, new ApiError(500, "Voice parsing is not configured on this server.", "GROQ_NOT_CONFIGURED"));
+  }
+
+  const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model:      "llama-3.1-8b-instant",
+      max_tokens: 600,
+      temperature: 0,
+      messages: [
+        { role: "system", content: VOICE_SYSTEM_PROMPT },
+        { role: "user",   content: transcript.trim() },
+      ],
+    }),
+  });
+
+  if (!groqRes.ok) {
+    const errText = await groqRes.text().catch(() => "");
+    console.error("[voice-parse] Groq error:", groqRes.status, errText);
+    return errorResponse(c, new ApiError(502, "AI service error. Please try again.", "GROQ_ERROR"));
+  }
+
+  const groqData = await groqRes.json() as {
+    choices: Array<{ message: { content: string } }>;
+  };
+
+  const rawText = groqData?.choices?.[0]?.message?.content ?? "";
+
+  let parsed: Record<string, unknown>;
+  try {
+    const cleaned = rawText.replace(/```(?:json)?/g, "").replace(/```/g, "").trim();
+    parsed = JSON.parse(cleaned);
+  } catch {
+    console.error("[voice-parse] Failed to parse JSON:", rawText);
+    return errorResponse(c, new ApiError(422, "Could not understand the response. Please try again.", "PARSE_ERROR"));
+  }
+
+  return successResponse(c, { product: parsed, transcript });
+});
+
 app.onError((err, c) => errorResponse(c, err));
 
 app.notFound((c) =>
